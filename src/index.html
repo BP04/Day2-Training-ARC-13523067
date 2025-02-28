@@ -228,11 +228,11 @@
                 </button>
             </div>
         </header>
-    
+
         <div class="products-grid" id="productsGrid"></div>
         <div class="loading" id="loading">Loading products...</div>
     </div>
-    
+
     <div class="back-to-top" id="backToTop">
         &#9650;
     </div>
@@ -241,13 +241,11 @@
         const state = {
             products: [],
             filteredProducts: [],
-            displayedProducts: [],
             loading: false,
             page: 0,
             limit: 10,
             hasMore: true,
-            searchQuery: '',
-            searchPage: 0
+            searchQuery: ''
         };
 
         const productsGrid = document.getElementById('productsGrid');
@@ -261,7 +259,6 @@
             
             state.loading = true;
             loadingElement.textContent = 'Loading products...';
-            loadingElement.style.display = 'block';
             
             try {
                 const skip = state.page * state.limit;
@@ -270,8 +267,7 @@
                 
                 if (data.products.length === 0) {
                     state.hasMore = false;
-                    loadingElement.textContent = 'No more products to load';
-                    loadingElement.style.display = state.searchQuery ? 'none' : 'block';
+                    loadingElement.textContent = '';
                     return;
                 }
                 
@@ -279,10 +275,10 @@
                 state.page++;
                 
                 if (state.searchQuery) {
-                    filterProducts(false);
+                    filterProducts();
                 } else {
                     state.filteredProducts = state.products;
-                    displayMoreProducts();
+                    renderProducts();
                 }
             } catch (error) {
                 console.error('Error fetching products:', error);
@@ -292,44 +288,13 @@
             }
         }
 
-        function filterProducts(resetDisplay = true) {
-            const query = state.searchQuery.toLowerCase();
-            state.filteredProducts = state.products.filter(product => 
-                product.title.toLowerCase().includes(query) || 
-                product.description.toLowerCase().includes(query)
-            );
-            
-            if (resetDisplay) {
-                state.displayedProducts = [];
-                state.searchPage = 0;
-            }
-            
-            displayMoreProducts();
-        }
-
-        function displayMoreProducts() {
-            if (state.filteredProducts.length === 0) {
+        function renderProducts() {
+            if (state.filteredProducts.length === 0 && state.searchQuery) {
                 productsGrid.innerHTML = '<div class="no-results">No products found matching your search</div>';
-                loadingElement.style.display = 'none';
                 return;
             }
             
-            const startIndex = state.displayedProducts.length;
-            const endIndex = Math.min(startIndex + state.limit, state.filteredProducts.length);
-            const newProductsToDisplay = state.filteredProducts.slice(startIndex, endIndex);
-            
-            state.displayedProducts = [...state.displayedProducts, ...newProductsToDisplay];
-            state.searchPage++;
-            
-            const hasMoreFiltered = state.displayedProducts.length < state.filteredProducts.length;
-            
-            loadingElement.style.display = (hasMoreFiltered || (!state.searchQuery && state.hasMore)) ? 'block' : 'none';
-            
-            renderProducts(newProductsToDisplay, startIndex === 0);
-        }
-
-        function renderProducts(productsToRender, clearExisting = false) {
-            const productsHTML = productsToRender.map(product => `
+            const productsToRender = state.filteredProducts.map(product => `
                 <div class="product-card">
                     <img src="${product.thumbnail}" alt="${product.title}" class="product-image">
                     <div class="product-info">
@@ -346,11 +311,15 @@
                 </div>
             `).join('');
             
-            if (clearExisting) {
-                productsGrid.innerHTML = productsHTML;
-            } else {
-                productsGrid.innerHTML += productsHTML;
-            }
+            productsGrid.innerHTML = productsToRender;
+        }
+
+        function filterProducts() {
+            const query = state.searchQuery.toLowerCase();
+            state.filteredProducts = state.products.filter(product => 
+                product.title.toLowerCase().includes(query)
+            );
+            renderProducts();
         }
 
         searchInput.addEventListener('keyup', (e) => {
@@ -362,19 +331,16 @@
         searchButton.addEventListener('click', performSearch);
 
         function performSearch() {
-            const newQuery = searchInput.value.trim();
+            state.searchQuery = searchInput.value.trim();
+            state.filteredProducts = [];
             
-            if (newQuery !== state.searchQuery) {
-                state.searchQuery = newQuery;
-                
-                if (state.searchQuery === '') {
-                    state.filteredProducts = state.products;
-                    state.displayedProducts = [];
-                    state.searchPage = 0;
-                }
-                
-                filterProducts(true);
+            if (state.searchQuery === '') {
+                state.filteredProducts = state.products;
+            } else {
+                filterProducts();
             }
+            
+            renderProducts();
         }
 
         function handleScroll() {
@@ -382,18 +348,8 @@
             const scrollTop = document.documentElement.scrollTop || document.body.scrollTop;
             const clientHeight = document.documentElement.clientHeight;
             
-            if (scrollTop + clientHeight >= scrollHeight - 200 && !state.loading) {
-                if (state.searchQuery) {
-                    if (state.displayedProducts.length < state.filteredProducts.length) {
-                        displayMoreProducts();
-                    } 
-                    else if (state.hasMore) {
-                        fetchProducts();
-                    }
-                } 
-                else if (state.hasMore) {
-                    fetchProducts();
-                }
+            if (scrollTop + clientHeight >= scrollHeight - 200 && !state.loading && state.hasMore) {
+                fetchProducts();
             }
             
             if (scrollTop > 300) {
@@ -412,6 +368,7 @@
 
         function init() {
             fetchProducts();
+            
             window.addEventListener('scroll', handleScroll);
         }
 
