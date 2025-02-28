@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ARC Shop</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: #f5f5f5;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 0;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        .logo {
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .search-container {
+            position: relative;
+            width: 100%;
+            max-width: 500px;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 12px 20px;
+            border-radius: 25px;
+            border: 1px solid #ddd;
+            font-size: 16px;
+            outline: none;
+            transition: border-color 0.3s, box-shadow 0.3s;
+        }
+
+        .search-input:focus {
+            border-color: #4a90e2;
+            box-shadow: 0 0 8px rgba(74, 144, 226, 0.3);
+        }
+
+        .search-button {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            background-color: #4a90e2;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .search-button:hover {
+            background-color: #3a7bc8;
+            transform: translateY(-50%) scale(1.05);
+        }
+
+        .products-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+        }
+
+        .product-card {
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .product-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+        }
+
+        .product-image {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+        }
+
+        .product-info {
+            padding: 15px;
+        }
+
+        .product-title {
+            font-size: 18px;
+            margin-bottom: 10px;
+            color: #333;
+        }
+
+        .product-description {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 10px;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .product-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 10px;
+        }
+
+        .product-price {
+            font-size: 18px;
+            font-weight: bold;
+            color: #4a90e2;
+        }
+
+        .product-rating {
+            display: flex;
+            align-items: center;
+            background-color: #f8f8f8;
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 14px;
+        }
+
+        .rating-star {
+            color: #ffd700;
+            margin-right: 5px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            font-size: 18px;
+            color: #666;
+        }
+
+        .back-to-top {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background-color: #4a90e2;
+            color: white;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            opacity: 0;
+            transition: opacity 0.3s, transform 0.3s;
+            z-index: 1000;
+        }
+
+        .back-to-top.visible {
+            opacity: 1;
+        }
+
+        .back-to-top:hover {
+            transform: scale(1.1);
+        }
+
+        @media (max-width: 768px) {
+            header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .search-container {
+                max-width: 100%;
+            }
+
+            .products-grid {
+                grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+            }
+        }
+
+        @media (max-width: 480px) {
+            .products-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .no-results {
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 50px;
+            font-size: 18px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="logo">ARC Shop</div>
+            <div class="search-container">
+                <input type="text" class="search-input" placeholder="Search products...">
+                <button class="search-button">
+                    &#128269;
+                </button>
+            </div>
+        </header>
+    
+        <div class="products-grid" id="productsGrid"></div>
+        <div class="loading" id="loading">Loading products...</div>
+    </div>
+    
+    <div class="back-to-top" id="backToTop">
+        &#9650;
+    </div>
+
+    <script>
+        const state = {
+            products: [],
+            filteredProducts: [],
+            displayedProducts: [],
+            loading: false,
+            page: 0,
+            limit: 10,
+            hasMore: true,
+            searchQuery: '',
+            searchPage: 0
+        };
+
+        const productsGrid = document.getElementById('productsGrid');
+        const loadingElement = document.getElementById('loading');
+        const backToTopButton = document.getElementById('backToTop');
+        const searchInput = document.querySelector('.search-input');
+        const searchButton = document.querySelector('.search-button');
+
+        async function fetchProducts() {
+            if (state.loading || !state.hasMore) return;
+            
+            state.loading = true;
+            loadingElement.textContent = 'Loading products...';
+            loadingElement.style.display = 'block';
+            
+            try {
+                const skip = state.page * state.limit;
+                const response = await fetch(`https://dummyjson.com/products?limit=${state.limit}&skip=${skip}`);
+                const data = await response.json();
+                
+                if (data.products.length === 0) {
+                    state.hasMore = false;
+                    loadingElement.textContent = 'No more products to load';
+                    loadingElement.style.display = state.searchQuery ? 'none' : 'block';
+                    return;
+                }
+                
+                state.products = [...state.products, ...data.products];
+                state.page++;
+                
+                if (state.searchQuery) {
+                    filterProducts(false);
+                } else {
+                    state.filteredProducts = state.products;
+                    displayMoreProducts();
+                }
+            } catch (error) {
+                console.error('Error fetching products:', error);
+                loadingElement.textContent = 'Error loading products. Please try again.';
+            } finally {
+                state.loading = false;
+            }
+        }
+
+        function filterProducts(resetDisplay = true) {
+            const query = state.searchQuery.toLowerCase();
+            state.filteredProducts = state.products.filter(product => 
+                product.title.toLowerCase().includes(query) || 
+                product.description.toLowerCase().includes(query)
+            );
+            
+            if (resetDisplay) {
+                state.displayedProducts = [];
+                state.searchPage = 0;
+            }
+            
+            displayMoreProducts();
+        }
+
+        function displayMoreProducts() {
+            if (state.filteredProducts.length === 0) {
+                productsGrid.innerHTML = '<div class="no-results">No products found matching your search</div>';
+                loadingElement.style.display = 'none';
+                return;
+            }
+            
+            const startIndex = state.displayedProducts.length;
+            const endIndex = Math.min(startIndex + state.limit, state.filteredProducts.length);
+            const newProductsToDisplay = state.filteredProducts.slice(startIndex, endIndex);
+            
+            state.displayedProducts = [...state.displayedProducts, ...newProductsToDisplay];
+            state.searchPage++;
+            
+            const hasMoreFiltered = state.displayedProducts.length < state.filteredProducts.length;
+            
+            loadingElement.style.display = (hasMoreFiltered || (!state.searchQuery && state.hasMore)) ? 'block' : 'none';
+            
+            renderProducts(newProductsToDisplay, startIndex === 0);
+        }
+
+        function renderProducts(productsToRender, clearExisting = false) {
+            const productsHTML = productsToRender.map(product => `
+                <div class="product-card">
+                    <img src="${product.thumbnail}" alt="${product.title}" class="product-image">
+                    <div class="product-info">
+                        <h3 class="product-title">${product.title}</h3>
+                        <p class="product-description">${product.description}</p>
+                        <div class="product-meta">
+                            <div class="product-price">$${product.price}</div>
+                            <div class="product-rating">
+                                <span class="rating-star">★</span> 
+                                <span>${product.rating}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+            
+            if (clearExisting) {
+                productsGrid.innerHTML = productsHTML;
+            } else {
+                productsGrid.innerHTML += productsHTML;
+            }
+        }
+
+        searchInput.addEventListener('keyup', (e) => {
+            if (e.key === 'Enter') {
+                performSearch();
+            }
+        });
+
+        searchButton.addEventListener('click', performSearch);
+
+        function performSearch() {
+            const newQuery = searchInput.value.trim();
+            
+            if (newQuery !== state.searchQuery) {
+                state.searchQuery = newQuery;
+                
+                if (state.searchQuery === '') {
+                    state.filteredProducts = state.products;
+                    state.displayedProducts = [];
+                    state.searchPage = 0;
+                }
+                
+                filterProducts(true);
+            }
+        }
+
+        function handleScroll() {
+            const scrollHeight = document.documentElement.scrollHeight;
+            const scrollTop = document.documentElement.scrollTop || document.body.scrollTop;
+            const clientHeight = document.documentElement.clientHeight;
+            
+            if (scrollTop + clientHeight >= scrollHeight - 200 && !state.loading) {
+                if (state.searchQuery) {
+                    if (state.displayedProducts.length < state.filteredProducts.length) {
+                        displayMoreProducts();
+                    } 
+                    else if (state.hasMore) {
+                        fetchProducts();
+                    }
+                } 
+                else if (state.hasMore) {
+                    fetchProducts();
+                }
+            }
+            
+            if (scrollTop > 300) {
+                backToTopButton.classList.add('visible');
+            } else {
+                backToTopButton.classList.remove('visible');
+            }
+        }
+
+        backToTopButton.addEventListener('click', () => {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        });
+
+        function init() {
+            fetchProducts();
+            window.addEventListener('scroll', handleScroll);
+        }
+
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
